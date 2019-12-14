@@ -50,15 +50,22 @@ router.post('/', isSafe, isLoggedIn, function (req, res) {
         username: req.user.username
     };
     var cost = req.body.cost;
-    geocoder.geocode(req.body.location, function (err, data) {
-        if (err || data.status === 'ZERO_RESULTS') {
-            req.flash('error', 'Invalid address');
-            return res.redirect('back');
-        }
-        var lat = data.results[0].geometry.location.lat;
-        var lng = data.results[0].geometry.location.lng;
-        var location = data.results[0].formatted_address;
-        var newCampground = { name: name, image: image, description: desc, cost: cost, author:author, location: location, lat: lat, lng: lng };
+    var lat, lng, location, newCampground
+    if(process.env.MAP_API){
+        geocoder.geocode(req.body.location, function (err, data) {
+            if (err || data.status === 'ZERO_RESULTS') {
+                req.flash('error', 'Invalid address');
+                return res.redirect('back');
+            }
+            lat = data.results[0].geometry.location.lat;
+            lng = data.results[0].geometry.location.lng;
+            location = data.results[0].formatted_address;
+            newCampground = { name: name, image: image, description: desc, cost: cost, author:author, location: location, lat: lat, lng: lng };
+        })
+    } else {
+        location = req.body.location
+        newCampground = { name: name, image: image, description: desc, cost: cost, author:author, location: location };
+    }
         // create new campgrounds to db
         Campground.create(newCampground, function (err, newlyCampground) {
             if (err) {
@@ -69,7 +76,6 @@ router.post('/', isSafe, isLoggedIn, function (req, res) {
             }
         });
     });
-});
 
 //NEW - show form to create a new camp
 router.get('/new', isLoggedIn, function (req, res) {
@@ -101,11 +107,19 @@ router.get('/:id/edit', isLoggedIn, checkUserCampground, function(req, res){
 //Update Campground Route
 router.put('/:id', isSafe, function(req,res){
     //find and update the correct campground
-    geocoder.geocode(req.body.location, function (err, data) {
-        var lat = data.results[0].geometry.location.lat;
-        var lng = data.results[0].geometry.location.lng;
-        var location = data.results[0].formatted_address;
-        var newData = {name: req.body.name, image: req.body.image, description: req.body.description, cost: req.body.cost, location: location, lat: lat, lng: lng};
+    var lat, lng, location
+    if(process.env.MAP_API){
+        geocoder.geocode(req.body.location, function (err, data) {
+            lat = data.results[0].geometry.location.lat;
+            lng = data.results[0].geometry.location.lng;
+            location = data.results[0].formatted_address;
+        })
+        newData = {name: req.body.name, image: req.body.image, description: req.body.description, cost: req.body.cost, location: location, lat: lat, lng: lng};
+
+    }else {
+        location = req.body.location
+        newData = {name: req.body.name, image: req.body.image, description: req.body.description, cost: req.body.cost, location: location };
+    }   
         Campground.findByIdAndUpdate(req.params.id, {$set: newData}, function(err, updatedCampground){
             if(err){
                 req.flash('error', err.message)
@@ -116,12 +130,11 @@ router.put('/:id', isSafe, function(req,res){
                 res.redirect('/campgrounds/'+req.params.id); //or + updatedCampground._id
             }
         });
-    });    
-});
+    });
 
 //Destroy Campground - Route
 router.delete('/:id', isLoggedIn, checkUserCampground, function(req,res){
-    Comment.remove({
+    Comment.deleteOne({
         _id: {
           $in: req.campground.comments
         }
@@ -130,7 +143,7 @@ router.delete('/:id', isLoggedIn, checkUserCampground, function(req,res){
             req.flash('error', err.message);
             res.redirect('/');
         } else {
-            req.campground.remove(function(err) {
+            req.campground.deleteOne(function(err) {
               if(err) {
                   req.flash('error', err.message);
                   return res.redirect('/');
