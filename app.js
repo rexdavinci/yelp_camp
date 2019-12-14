@@ -1,28 +1,33 @@
-var express			= require ('express'),
-	app				= express(),
-	bodyParser		= require('body-parser'),
-	mongoose		= require('mongoose'),
-	flash			= require('connect-flash'),
-	passport		= require('passport'),
-	LocalStrategy	= require('passport-local'),
-	methodOverride	= require('method-override'),
-	Campground		= require('./models/campground'),
-	Comment			= require('./models/comment'),
-	User 			= require('./models/user'),
-	seedDB			= require('./seeds');
+require('dotenv').config()
+var express					= require ('express'),
+		app							= express(),
+		bodyParser			= require('body-parser'),
+		mongoose				= require('mongoose'),
+		cookieParser 		= require('cookie-parser'),
+		flash						= require('connect-flash'),
+		passport				= require('passport'),
+		LocalStrategy		= require('passport-local'),
+		methodOverride	= require('method-override'),
+		User 						= require('./models/user'),
+		seedDB					= require('./seeds');
 
 //requiring routes
-var commentRoutes		= require('./routes/comments'),
-	campgroundRoutes	= require('./routes/campgrounds'),
-	indexRoutes			= require('./routes/index');
+var commentRoutes			= require('./routes/comments'),
+		campgroundRoutes	= require('./routes/campgrounds'),
+		indexRoutes				= require('./routes/index');
 
-mongoose.connect(process.env.DATABASE, { useNewUrlParser: true });
+mongoose.Promise = global.Promise;
 
-mongoose.set('useFindAndModify', false);
+mongoose.connect(process.env.DATABASE, { useNewUrlParser: true, useUnifiedTopology: true })
+	.then(() => console.log("Database connected"))
+	.catch(err => console.log(`Database connection error: ${err.message}`));
+
 app.use(bodyParser.urlencoded({extended: true})); 
 app.set('view engine', 'ejs');
 app.use(express.static(__dirname + "/public"));
 app.use(methodOverride("_method"));
+app.use(cookieParser('secret'))
+app.locals.moment = require('moment')
 app.use(flash());
 //seedDB(); //seed the database
 
@@ -32,6 +37,7 @@ app.use(require('express-session')({
 	resave: false,
 	saveUninitialized: false
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new LocalStrategy(User.authenticate()));
@@ -49,13 +55,8 @@ app.use('/', indexRoutes);
 app.use('/campgrounds', campgroundRoutes);
 app.use('/campgrounds/:id/comments/', commentRoutes);
 
-var port = process.env.PORT || 3000;
+var port = process.env.PORT
 
 app.listen(port, function(){
 	console.log(`Yelpcamp started on ${port}`);
 });
-
-
-// app.listen(3000, function () {
-// 	console.log('YelpCamp Server Started On Port 3000');
-// });
