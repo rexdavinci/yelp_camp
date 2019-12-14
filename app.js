@@ -18,7 +18,7 @@ var commentRoutes			= require('./routes/comments'),
 
 mongoose.Promise = global.Promise;
 
-mongoose.connect(process.env.DATABASE, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.DATABASE, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
 	.then(() => console.log("Database connected"))
 	.catch(err => console.log(`Database connection error: ${err.message}`));
 

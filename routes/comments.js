@@ -88,7 +88,7 @@ router.delete('/:comment_id', isLoggedIn, checkUserComment, function(req, res){
         req.flash('error', err.message);
         res.redirect('/');
     } else {
-        req.comment.remove(function(err) {
+        req.comment.deleteOne(function(err) {
           if(err) {
             req.flash('error', err.message);
             return res.redirect('/');
